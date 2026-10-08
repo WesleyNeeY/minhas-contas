@@ -1,4 +1,4 @@
-const CACHE = 'minhas-contas-v2';
+const CACHE = 'minhas-contas-v3';
 const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icone-192.png', './icone-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQUIVOS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

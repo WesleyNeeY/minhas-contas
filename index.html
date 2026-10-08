@@ -129,6 +129,14 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .conta.pago .val{color:var(--muted)}
 .conta.pago .ico{filter:grayscale(.6);opacity:.7}
 
+.acao{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px}
+.acao .k{flex:1 1 100%;min-width:0;padding:0 2px}
+.acao .k small{display:block;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.acao .k span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px;font-weight:700;word-break:break-all;margin-top:1px}
+.bcopia{border:0;background:var(--accent);color:var(--accent-ink);font-weight:800;border-radius:11px;padding:10px 12px;font-size:14px;display:flex;gap:6px;align-items:center;justify-content:center;white-space:nowrap;flex:1}
+.bcopia svg{width:16px;height:16px}
+.bpaguei{border:1px solid var(--line);background:var(--card);font-weight:800;border-radius:11px;padding:9px 14px;font-size:14px;white-space:nowrap}
+
 .vazio{text-align:center;padding:28px 18px;background:var(--card);border:1.5px dashed var(--line);border-radius:20px;color:var(--muted)}
 .vazio h2{color:var(--ink);font-size:19px;margin:0 0 4px}
 .sug{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
@@ -306,6 +314,7 @@ const CATS = {
   assin:{n:'Assinaturas',c:'#9333ea'}, emprest:{n:'Empréstimo',c:'#64748b'},
   negocio:{n:'Negócio / anúncios',c:'#ea580c'}, outros:{n:'Outros',c:'#8b95a1'}
 };
+const FORMAS = {pix:'Pix', boleto:'Boleto', cartao:'Cartão de crédito', debito:'Débito automático', dinheiro:'Dinheiro', outro:'Outro'};
 const icone = (k, cls='i') => `<svg class="${cls}" viewBox="0 0 24 24">${ICONES[k] || ICONES.outros}</svg>`;
 const SUGESTOES = [['Aluguel','moradia'],['Luz','servicos'],['Água','servicos'],['Internet','net'],['Celular','net'],['Cartão','cartao'],['Mercado','mercado'],['Anúncios Meta','negocio']];
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -526,7 +535,7 @@ function itensDoMes(k){
     const it = itens[c.id] || {};
     const pago = !!it.pago;
     const valor = pago && typeof it.valorPago === 'number' ? it.valorPago : (typeof it.valor === 'number' ? it.valor : c.valor);
-    out.push({c, parc, valor, pago, pagoEm: it.pagoEm, venc: new Date(y, m, Math.min(c.dia, dim))});
+    out.push({c, parc, valor, pago, pagoEm: it.pagoEm, boleto: it.boleto || '', venc: new Date(y, m, Math.min(c.dia, dim))});
   }
   return out;
 }
@@ -548,12 +557,22 @@ const garanteMes = k => { state.meses[k] = state.meses[k] || {}; state.meses[k].
 /* ---------- tela ---------- */
 function linhaConta(i){
   const s = situacao(i); const cat = CATS[i.c.cat] || CATS.outros;
-  const sub = [cat.n, i.parc ? `parcela ${i.parc}` : '', i.c.tipo === 'unica' ? 'só uma vez' : ''].filter(Boolean).join(' · ');
+  const sub = [FORMAS[i.c.forma] || cat.n, i.parc ? `parcela ${i.parc}` : '', i.c.tipo === 'unica' ? 'só uma vez' : ''].filter(Boolean).join(' · ');
+  let acao = '';
+  if (!i.pago && i.c.forma === 'pix' && i.c.pix){
+    acao = `<div class="acao"><div class="k"><small>Pix${i.c.pixNome ? ' · ' + esc(i.c.pixNome) : ''}</small><span>${esc(i.c.pix)}</span></div>
+      <button class="bcopia" data-copy="${i.c.id}"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copiar Pix</button>
+      <button class="bpaguei" data-pay="${i.c.id}">Já paguei</button></div>`;
+  } else if (!i.pago && i.c.forma === 'boleto' && i.boleto){
+    acao = `<div class="acao"><div class="k"><small>Código do boleto</small><span>${esc(i.boleto)}</span></div>
+      <button class="bcopia" data-copy="${i.c.id}"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copiar código</button>
+      <button class="bpaguei" data-pay="${i.c.id}">Já paguei</button></div>`;
+  }
   return `<li class="conta ${s.cls}" style="--cc:${cat.c};--cc-soft:${cat.c}22">
     <button class="chk" data-pay="${i.c.id}" aria-label="${i.pago ? 'Desmarcar' : 'Marcar como paga'}: ${esc(i.c.nome)}"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
     <span class="ico" aria-hidden="true">${icone(i.c.cat)}</span>
     <button class="info" data-edit="${i.c.id}"><b>${esc(i.c.nome)}</b><span>${esc(sub)}</span></button>
-    <div class="dir"><b class="val">${brl(i.valor)}</b><span class="pill">${s.txt}</span></div></li>`;
+    <div class="dir"><b class="val">${brl(i.valor)}</b><span class="pill">${s.txt}</span></div>${acao}</li>`;
 }
 function render(){
   const h = new Date().getHours();
@@ -640,6 +659,10 @@ function formConta(c, pre){
       <div class="campo"><label for="fDia">Vence todo dia</label><input id="fDia" type="number" min="1" max="31" inputmode="numeric" value="${c.dia}"></div>
     </div>
     <div class="campo"><label for="fCat">Categoria</label><select id="fCat">${Object.entries(CATS).map(([k,v]) => `<option value="${k}" ${k===c.cat?'selected':''}>${v.n}</option>`).join('')}</select></div>
+    <div class="campo"><label for="fForma">Como você paga</label><select id="fForma"><option value="">— escolha —</option>${Object.entries(FORMAS).map(([k,v]) => `<option value="${k}" ${k===c.forma?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="campo" id="boxPix"><label for="fPix">Chave Pix</label><input id="fPix" maxlength="600" autocomplete="off" placeholder="CPF, celular, e-mail, chave aleatória ou Pix Copia e Cola" value="${esc(c.pix || '')}"></div>
+    <div class="campo" id="boxPixNome"><label for="fPixNome">Nome de quem recebe (opcional)</label><input id="fPixNome" maxlength="60" placeholder="Ex: Imobiliária Silva" value="${esc(c.pixNome || '')}"></div>
+    <div class="campo" id="boxBoleto"><label for="fBoleto">Código do boleto de ${MESES[pm(mes).m]}</label><input id="fBoleto" maxlength="120" inputmode="numeric" autocomplete="off" placeholder="Cole aqui a linha digitável" value="${esc((itemMes && itemMes.boleto) || '')}"><span class="dica" style="margin:2px 0 0">O código muda todo mês. Cole o novo quando o boleto chegar.</span></div>
     <div class="campo"><span class="l">Tipo</span><div class="seg" id="fTipo">
       <button data-t="fixa">Todo mês</button><button data-t="parcelada">Parcelada</button><button data-t="unica">Só uma vez</button></div></div>
     <div class="linha">
@@ -658,6 +681,12 @@ function formConta(c, pre){
     };
     $('#fTipo').onclick = e => { const b = e.target.closest('button'); if (b){ tipo = b.dataset.t; pintaTipo(); } };
     pintaTipo();
+    const pintaForma = () => {
+      const f = $('#fForma').value;
+      $('#boxPix').hidden = $('#boxPixNome').hidden = f !== 'pix';
+      $('#boxBoleto').hidden = f !== 'boleto';
+    };
+    $('#fForma').onchange = pintaForma; pintaForma();
     if (novo) setTimeout(() => (pre ? $('#fValor') : $('#fNome')).focus(), 60);
     $('#fCancel').onclick = fechar;
     $('#fOk').onclick = () => {
@@ -665,20 +694,27 @@ function formConta(c, pre){
       const dia = parseInt($('#fDia').value, 10), parcelas = parseInt($('#fParc').value, 10);
       const inicio = /^\d{4}-\d{2}$/.test($('#fIni').value) ? $('#fIni').value : mes;
       const err = !nome ? 'Escreva o nome da conta.' : !(valor >= 0) ? 'Escreva o valor, ex: 120,50' : !(dia >= 1 && dia <= 31) ? 'O dia precisa ser de 1 a 31.' : (tipo === 'parcelada' && !(parcelas >= 2)) ? 'Parcelada precisa de 2 parcelas ou mais.' : '';
+      const forma = $('#fForma').value, pix = forma === 'pix' ? $('#fPix').value.trim() : '', pixNome = forma === 'pix' ? $('#fPixNome').value.trim() : '';
+      const boleto = forma === 'boleto' ? $('#fBoleto').value.trim() : '';
       if (err){ $('#fErro').textContent = err; return; }
       const soEste = tipo === 'fixa' && $('#fSo') && $('#fSo').checked;
+      let id = c.id;
       if (novo){
-        state.contas.push({id: uid(), nome, valor, dia, cat: $('#fCat').value, tipo, parcelas: tipo === 'parcelada' ? parcelas : null, inicio});
+        id = uid();
+        state.contas.push({id, nome, valor, dia, cat: $('#fCat').value, tipo, parcelas: tipo === 'parcelada' ? parcelas : null, inicio, forma, pix, pixNome});
         aviso('Conta adicionada');
       } else {
         const alvo = state.contas.find(x => x.id === c.id);
-        Object.assign(alvo, {nome, dia, cat: $('#fCat').value, tipo, parcelas: tipo === 'parcelada' ? parcelas : null, inicio});
+        Object.assign(alvo, {nome, dia, cat: $('#fCat').value, tipo, parcelas: tipo === 'parcelada' ? parcelas : null, inicio, forma, pix, pixNome});
         if (tipo !== 'fixa') delete alvo.fim;
         const it = state.meses[mes] && state.meses[mes].itens && state.meses[mes].itens[c.id];
         if (soEste){ const novoIt = {...(it||{}), valor}; if (novoIt.pago) novoIt.valorPago = valor; garanteMes(mes).itens[c.id] = novoIt; }
         else { alvo.valor = valor; if (it){ delete it.valor; if (it.pago) it.valorPago = valor; } }
         aviso('Alterações salvas');
       }
+      const itAtual = state.meses[mes] && state.meses[mes].itens && state.meses[mes].itens[id];
+      if (boleto) garanteMes(mes).itens[id] = {...(itAtual || {}), boleto};
+      else if (itAtual && itAtual.boleto) delete itAtual.boleto;
       salvar(); fechar(); render();
     };
     const del = $('#fDel');
@@ -730,8 +766,25 @@ document.querySelector('.abas').onclick = e => {
   document.querySelectorAll('.abas button').forEach(x => x.classList.toggle('on', x === b));
   render();
 };
-$('#lista').onclick = e => {
-  const p = e.target.closest('[data-pay]'), ed = e.target.closest('[data-edit]');
+async function copiar(txt){
+  try { await navigator.clipboard.writeText(txt); return true; }
+  catch(e){
+    const t = document.createElement('textarea'); t.value = txt; t.setAttribute('readonly', '');
+    t.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(t);
+    t.select(); t.setSelectionRange(0, txt.length);
+    let ok = false; try { ok = document.execCommand('copy'); } catch(_){}
+    t.remove(); return ok;
+  }
+}
+$('#lista').onclick = async e => {
+  const p = e.target.closest('[data-pay]'), ed = e.target.closest('[data-edit]'), cp = e.target.closest('[data-copy]');
+  if (cp){
+    const i = itensDoMes(mes).find(x => x.c.id === cp.dataset.copy); if (!i) return;
+    const txt = i.c.forma === 'pix' ? i.c.pix : i.boleto;
+    const ok = await copiar(txt);
+    aviso(ok ? (i.c.forma === 'pix' ? 'Chave Pix copiada! Cole no app do banco.' : 'Código copiado! Cole no app do banco.') : 'Não consegui copiar. Toque e segure na chave para copiar.');
+    return;
+  }
   if (p){
     const id = p.dataset.pay;
     const i = itensDoMes(mes).find(x => x.c.id === id); if (!i) return;
