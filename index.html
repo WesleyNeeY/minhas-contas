@@ -470,7 +470,7 @@ function entrouOuSaiu(session){
     carregar(); assinar();
   } else {
     usuario = null; if (canal){ sb.removeChannel(canal); canal = null; }
-    state = vazio(); mostrar('login'); $('#chatTela').hidden=true; $('#chatReabrir').hidden=true; fechar();
+    state = vazio(); mostrar('login'); $('#chatTela').hidden=true; $('#chatReabrir').hidden=true; chatPendente=null; $('#chatHistorico').replaceChildren(); fechar();
   }
 }
 
@@ -855,7 +855,7 @@ function chatAbrir(aberto=true){
  if(aberto && !$('#chatHistorico').children.length) chatFala('Olá! 👋 Me diga o que você gastou ou peça um lembrete.\n\nExemplos:\n• Gastei R$ 35 no mercado\n• Me lembra de pagar a água dia 12\n• Quanto tenho para pagar?');
 }
 function chatNumero(t){
- let x=String(t).replace(/\./g,'').replace(',','.');return Number(x);
+ let x=String(t);if(x.includes(','))x=x.replace(/\./g,'').replace(',','.');return Number(x);
 }
 function chatData(t){
  const d=t.match(/\b(?:dia\s*)?(\d{1,2})(?:\s*\/\s*(\d{1,2}))?(?:\s*\/\s*(\d{4}))?\b/);
@@ -924,7 +924,7 @@ document.querySelectorAll('.chatAtalhos [data-msg]').forEach(b=>b.onclick=()=>{l
 $('#chatVoz').onclick=()=>{
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!SR){chatFala('O reconhecimento de voz não está disponível neste navegador. Use o microfone do teclado do celular para ditar a mensagem.');return;}
- const rec=new SR();rec.lang='pt-BR';rec.interimResults=false;rec.onresult=e=>{$('#chatTexto').value=e.results[0][0].transcript;$('#chatTexto').focus();};
+ const rec=new SR();rec.lang='pt-BR';rec.interimResults=false;rec.onresult=e=>{const fala=e.results[0][0].transcript;$('#chatTexto').value='';chatProcessar(fala);};
  rec.onerror=()=>chatFala('Não consegui ouvir. Confira a permissão do microfone ou use o microfone do teclado.');
  try{rec.start();}catch(e){chatFala('Não foi possível iniciar o microfone.');}
 };
