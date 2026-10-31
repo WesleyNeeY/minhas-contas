@@ -231,6 +231,24 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 .toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-weight:800;font-size:14px;z-index:20;max-width:calc(100% - 32px);box-shadow:var(--shadow-lg);animation:fade .2s}
 @media (max-width:380px){.grande{font-size:30px}.anel{width:74px;height:74px}.conta{gap:9px;padding:10px}.ico{width:36px;height:36px}}
+
+/* Assistente de conversa */
+#chatTela{position:fixed;z-index:12;inset:0;background:var(--bg);display:flex;flex-direction:column;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));}
+#chatTela[hidden]{display:none}
+.chatTopo{display:flex;align-items:center;gap:10px;background:var(--accent);border-radius:18px;padding:12px;color:white}
+.chatTopo strong{flex:1;font-size:18px}
+.chatTopo button{border:1px solid #ffffff77;background:#ffffff20;color:#fff;border-radius:12px;padding:9px;font-weight:800}
+#chatHistorico{flex:1;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:16px 4px;min-height:0}
+.chatBala{max-width:88%;padding:12px 15px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);white-space:pre-wrap;overflow-wrap:anywhere}
+.chatBala.eu{align-self:flex-end;background:var(--ok-soft);color:var(--ink)}
+.chatBala.bot{align-self:flex-start}
+.chatAtalhos{display:flex;overflow:auto;gap:8px;padding:8px 0}
+.chatAtalhos button{flex:none;border:1px solid var(--line);border-radius:99px;background:var(--card);padding:9px 12px;font-weight:800}
+.chatEnvio{display:flex;gap:8px;align-items:center}
+.chatEnvio input{flex:1;min-width:0;padding:14px;border-radius:18px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+.chatEnvio button{border:0;background:var(--accent);color:white;border-radius:14px;padding:12px;font-weight:800}
+.chatEnvio button:disabled{opacity:.45}
+#chatReabrir{position:fixed;z-index:5;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));border:0;border-radius:99px;background:var(--accent);color:#fff;padding:12px 18px;font-weight:800;box-shadow:var(--shadow-lg)}
 </style>
 </head>
 <body>
@@ -248,6 +266,15 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
     <div class="links"><button type="button" class="link" id="lgTroca">Criar minha conta</button><button type="button" class="link" id="lgEsqueci">Esqueci a senha</button></div>
   </form>
 </section>
+
+
+<section id="chatTela" hidden aria-label="Assistente financeiro">
+ <div class="chatTopo"><strong>💬 Minhas Contas</strong><button type="button" id="chatPainel">Ver minhas contas</button></div>
+ <div id="chatHistorico" role="log" aria-live="polite"></div>
+ <div class="chatAtalhos"><button type="button" data-msg="Quanto tenho para pagar?">📊 Resumo</button><button type="button" data-msg="Quero registrar um gasto">💰 Novo gasto</button><button type="button" data-msg="Quero criar um lembrete">🔔 Lembrete</button></div>
+ <form id="chatForm" class="chatEnvio"><input id="chatTexto" aria-label="Mensagem" placeholder="Ex.: Gastei 35 no mercado" autocomplete="off"><button type="button" id="chatVoz" aria-label="Falar por áudio">🎙️</button><button type="submit">Enviar</button></form>
+</section>
+<button id="chatReabrir" type="button" hidden>💬 Conversar</button>
 
 <!-- ============ APP ============ -->
 <div class="wrap" id="telaApp" hidden>
@@ -361,14 +388,14 @@ const mostraValor = v => (typeof v === 'number' && isFinite(v)) ? v.toFixed(2).r
 const dd = d => String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
 
 /* ---------- estado ---------- */
-const vazio = () => ({contas:[], meses:{}, rendaPadrao:null});
+const vazio = () => ({contas:[], meses:{}, rendaPadrao:null, lembretes:[]});
 let state = vazio();
 let mes = mesAtual();
 let filtro = 'todas';
 
 function normaliza(s){
   s = s && typeof s === 'object' ? s : {};
-  return {contas: Array.isArray(s.contas) ? s.contas : [], meses: s.meses && typeof s.meses === 'object' ? s.meses : {}, rendaPadrao: typeof s.rendaPadrao === 'number' ? s.rendaPadrao : null};
+  return {contas: Array.isArray(s.contas) ? s.contas : [], meses: s.meses && typeof s.meses === 'object' ? s.meses : {}, rendaPadrao: typeof s.rendaPadrao === 'number' ? s.rendaPadrao : null, lembretes: Array.isArray(s.lembretes) ? s.lembretes : []};
 }
 
 /* ---------- login e sincronização (Supabase) ---------- */
@@ -411,7 +438,7 @@ async function carregar(){
   if (!sb || !usuario || timer || escrevendo) return;
   const { data, error } = await sb.from('carteiras').select('dados').eq('user_id', usuario.id).maybeSingle();
   if (error){ setSync('pendente'); return; }
-  if (data && data.dados){ state = normaliza(data.dados); gravarLocal(); render(); setSync('ok'); }
+  if (data && data.dados){ state = normaliza(data.dados); gravarLocal(); render(); chatChecarLembretes(); setSync('ok'); }
   else if (state.contas.length){ salvar(); }
   else setSync('ok');
 }
@@ -439,11 +466,11 @@ function entrouOuSaiu(session){
     if (usuario && usuario.id === u.id) return;
     usuario = u;
     state = lerLocal() || vazio();
-    mostrar('app'); render(); setSync('salvando');
+    mostrar('app'); render(); chatAbrir(true); setSync('salvando');
     carregar(); assinar();
   } else {
     usuario = null; if (canal){ sb.removeChannel(canal); canal = null; }
-    state = vazio(); mostrar('login'); fechar();
+    state = vazio(); mostrar('login'); $('#chatTela').hidden=true; $('#chatReabrir').hidden=true; fechar();
   }
 }
 
@@ -814,6 +841,102 @@ function formRenda(){
       salvar(); fechar(); render();
     };
   });
+}
+
+
+/* Assistente: comandos locais, sem serviços pagos de IA. */
+let chatPendente = null;
+function chatFala(txt, quem='bot'){
+ const d=document.createElement('div');d.className='chatBala '+quem;d.textContent=txt;
+ $('#chatHistorico').appendChild(d); $('#chatHistorico').scrollTop=$('#chatHistorico').scrollHeight;
+}
+function chatAbrir(aberto=true){
+ $('#chatTela').hidden=!aberto;$('#chatReabrir').hidden=aberto||!usuario;$('#nova').hidden=aberto||!usuario;
+ if(aberto && !$('#chatHistorico').children.length) chatFala('Olá! 👋 Me diga o que você gastou ou peça um lembrete.\n\nExemplos:\n• Gastei R$ 35 no mercado\n• Me lembra de pagar a água dia 12\n• Quanto tenho para pagar?');
+}
+function chatNumero(t){
+ let x=String(t).replace(/\./g,'').replace(',','.');return Number(x);
+}
+function chatData(t){
+ const d=t.match(/\b(?:dia\s*)?(\d{1,2})(?:\s*\/\s*(\d{1,2}))?(?:\s*\/\s*(\d{4}))?\b/);
+ if(!d)return null;
+ const hoje=new Date(),dia=+d[1],mesN=d[2]? +d[2] : hoje.getMonth()+1,ano=d[3]?+d[3]:hoje.getFullYear();
+ const dt=new Date(ano,mesN-1,dia);
+ if(dt.getDate()!==dia||dt.getMonth()!==mesN-1)return null;
+ if(!d[2]&&!d[3]&&dt<new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()))dt.setMonth(dt.getMonth()+1);
+ return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function chatCategoria(nome){
+ const n=nome.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ if(/mercado|supermercado|feira|alimento/.test(n))return 'mercado';
+ if(/gasolina|combustivel|uber|transporte/.test(n))return 'transporte';
+ if(/farmacia|medico|saude/.test(n))return 'saude';
+ if(/luz|agua|gas/.test(n))return 'servicos';
+ if(/internet|celular/.test(n))return 'net';
+ if(/aluguel|condominio/.test(n))return 'moradia';
+ return 'outros';
+}
+function chatProcessar(origem){
+ const s=String(origem||'').trim();if(!s)return;
+ chatFala(s,'eu');
+ const n=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ if(chatPendente){
+   if(/^(sim|confirmar|confirma|ok)$/.test(n)){
+    const p=chatPendente;chatPendente=null;
+    if(p.tipo==='gasto'){
+      const hoje=new Date(),inicio=mk(hoje.getFullYear(),hoje.getMonth());
+      const id=uid();state.contas.push({id,nome:p.nome,valor:p.valor,dia:hoje.getDate(),cat:chatCategoria(p.nome),tipo:'unica',parcelas:null,inicio,forma:'outro',pix:'',pixNome:''});
+      const item=garanteMes(inicio).itens[id]={pago:true,valorPago:p.valor,pagoEm:hoje.toISOString().slice(0,10)};
+      salvar();render();chatFala('✅ Gasto de '+brl(p.valor)+' registrado em '+p.nome+'. Veja em Minhas Contas.');
+    }else{
+      state.lembretes=state.lembretes||[];state.lembretes.push({id:uid(),texto:p.texto,data:p.data,feito:false});
+      salvar();render();chatFala('🔔 Lembrete salvo para '+p.data.split('-').reverse().join('/')+'. Ele aparecerá no aplicativo na data. Ainda não envia notificações com o app fechado.');
+    }
+    return;
+   }
+   if(/^(nao|não|cancelar)$/.test(n)){chatPendente=null;chatFala('Certo, cancelado.');return;}
+   chatPendente=null;
+ }
+ if(/quanto|resumo|total|pagar/.test(n)&&!/lembra|lembrete/.test(n)&&!/gastei|comprei|paguei/.test(n)){
+   const itens=itensDoMes(mesAtual()),total=itens.reduce((a,i)=>a+i.valor,0),aberto=itens.filter(i=>!i.pago).reduce((a,i)=>a+i.valor,0);
+   chatFala('📊 Neste mês: '+brl(total)+' em contas.\nAinda falta pagar: '+brl(aberto)+'.');return;
+ }
+ if(/lembra|lembrete|lembrar/.test(n)){
+   const data=chatData(n.replace(/\b(?:em|de)\s+\d+\s*(?:reais?|r\$)/g,''));
+   if(!data){chatFala('Me diga a data completa. Exemplo: Me lembra de pagar a água dia 12/11.');return;}
+   const texto=s.replace(/^(me\s+)?lembra(?:r|ete)?\s*(?:de\s*)?/i,'').trim();
+   chatPendente={tipo:'lembrete',texto,data};chatFala('🔔 Salvar lembrete: '+texto+' em '+data.split('-').reverse().join('/')+'? Responda SIM ou CANCELAR.');return;
+ }
+ if(/gastei|comprei|paguei|gasto|despesa/.test(n)){
+   const m=s.match(/(?:R\$\s*)?(\d+(?:\.\d{3})*(?:,\d{1,2})?|\d+[.]\d{1,2})\s*(?:reais?)?/i);
+   if(!m){chatFala('Me diga o valor. Exemplo: Gastei R$ 35 no mercado.');return;}
+   const valor=chatNumero(m[1]);if(!Number.isFinite(valor)||valor<=0||valor>1000000){chatFala('Valor inválido.');return;}
+   const nome=s.replace(m[0],' ').replace(/\b(gastei|comprei|paguei|gasto|despesa|reais|de|com|no|na|em|hoje)\b/gi,' ').replace(/\s+/g,' ').trim()||'Despesa';
+   chatPendente={tipo:'gasto',valor,nome};
+   chatFala('💰 Registrar '+brl(valor)+' em "'+nome+'"? Responda SIM ou CANCELAR.');return;
+ }
+ chatFala('Posso registrar gastos e lembretes. Experimente:\n"Gastei 25 no café"\n"Me lembra de pagar a luz dia 15/11"\n"Quanto tenho para pagar?"');
+}
+$('#chatForm').addEventListener('submit',e=>{e.preventDefault();const i=$('#chatTexto');let s=i.value;i.value='';chatProcessar(s);});
+$('#chatPainel').onclick=()=>chatAbrir(false);
+$('#chatReabrir').onclick=()=>chatAbrir(true);
+document.querySelectorAll('.chatAtalhos [data-msg]').forEach(b=>b.onclick=()=>{let s=b.dataset.msg;if(s.startsWith('Quero')){$('#chatTexto').value=s.includes('gasto')?'Gastei R$  no ':'Me lembra de  dia /';$('#chatTexto').focus();}else chatProcessar(s);});
+$('#chatVoz').onclick=()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){chatFala('O reconhecimento de voz não está disponível neste navegador. Use o microfone do teclado do celular para ditar a mensagem.');return;}
+ const rec=new SR();rec.lang='pt-BR';rec.interimResults=false;rec.onresult=e=>{$('#chatTexto').value=e.results[0][0].transcript;$('#chatTexto').focus();};
+ rec.onerror=()=>chatFala('Não consegui ouvir. Confira a permissão do microfone ou use o microfone do teclado.');
+ try{rec.start();}catch(e){chatFala('Não foi possível iniciar o microfone.');}
+};
+function chatChecarLembretes(){
+ if(!usuario)return;
+ const hoje=new Date().toISOString().slice(0,10);
+ const pendentes=(state.lembretes||[]).filter(x=>!x.feito&&x.data<=hoje);
+ if(!pendentes.length)return;
+ const chave='mc-alerta-'+usuario.id+'-'+hoje;
+ if(sessionStorage.getItem(chave))return;
+ sessionStorage.setItem(chave,'1');
+ pendentes.forEach(x=>chatFala('🔔 Lembrete: '+x.texto+' ('+x.data.split('-').reverse().join('/')+')'));
 }
 
 /* ---------- eventos ---------- */
