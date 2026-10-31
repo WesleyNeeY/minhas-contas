@@ -5,8 +5,8 @@
 /* Assistente Lumi — visual oficial escolhido */
 body{background:#f2f4f2}.app{background:#f7f8f6}.top{display:none}.main{padding:calc(16px + env(safe-area-inset-top)) 16px 18px;gap:14px;justify-content:flex-start}.lumi-hero{width:100%;border-radius:29px;background:#07624e;color:#fff;padding:24px 22px 25px}.lumi-brand{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;text-align:left}.lumi-brand span{color:#c3dfd4;font-size:11px;font-weight:800;letter-spacing:.045em}.lumi-brand h2{color:#fff;margin:8px 0 0;font-size:clamp(24px,7vw,32px);font-weight:800;letter-spacing:-.035em;line-height:1.1}.lumi-config{border:0;color:white;background:transparent;font-size:29px;padding:4px 8px}.lumi-microfone{display:flex;justify-content:center;padding:37px 0 21px}.lumi-halo{width:185px;height:185px;border-radius:50%;background:#ffffff17;display:grid;place-items:center}.lumi-hero .orb{width:135px;height:135px;background:#fff;color:#246a56;border:0;box-shadow:none;font-size:55px}.lumi-hero h3{text-align:center;margin:0;font-size:clamp(23px,6.3vw,30px);font-weight:800;letter-spacing:-.035em}.lumi-sub{margin:14px 0 24px;text-align:center;color:#d1e7de;font-size:15px}.lumi-hero .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lumi-hero .tile{min-height:106px;border:none;background:#ffffff1c;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#fff;padding:14px 9px}.lumi-hero .tile .emoji{font-size:28px;margin:0;line-height:1}.lumi-hero .tile strong{font-size:15px;color:#fff;font-weight:700}.lumi-extra{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}.lumi-extra button{padding:15px 8px;border:1px solid #dbe7dd;border-radius:16px;background:#fff;color:#2b6755;font-weight:700}.main>.msg,.main>.pane,.main>.actions{max-width:100%}.login{margin-top:6vh}.foot{background:white}.compose{background:white}@media(max-width:380px){.lumi-hero{padding:20px 15px}.lumi-microfone{padding:23px 0 16px}.lumi-halo{width:153px;height:153px}.lumi-hero .orb{width:114px;height:114px}.lumi-hero .tile{min-height:93px}.lumi-hero .tile strong{font-size:14px}}
 .lumi-microfone{position:relative;min-height:245px;align-items:flex-end;overflow:visible}.lumi-personagem{position:absolute;width:214px;height:210px;top:-10px;left:50%;transform:translateX(-50%);filter:drop-shadow(0 8px 10px #003d2c45);pointer-events:none}.lumi-personagem svg{width:100%;height:100%}.lumi-halo{position:relative;z-index:2;width:130px;height:130px;margin-top:126px;margin-bottom:-9px}.lumi-hero .orb{width:94px;height:94px;font-size:42px}.lumi-hero{border-radius:30px}.lumi-hero .tile .emoji{font-family:system-ui;font-size:29px}@media(max-width:380px){.lumi-microfone{min-height:222px}.lumi-personagem{width:188px;height:187px}.lumi-halo{margin-top:112px;width:116px;height:116px}.lumi-hero .orb{width:85px;height:85px}}
-</style></head><body><div class="app"><header class="top"><small>Assistente pessoal por voz</small><h1>Assistente Lumi ✦</h1><span id="status" class="status">Verificando acesso...</span></header>
-<section class="login" id="login" hidden><h2>Vincular ao Minhas Contas</h2><p>Entre com a mesma conta do aplicativo financeiro. Assim os gastos poderão ser salvos na sua planilha.</p><input id="email" type="email" autocomplete="username" placeholder="Seu e-mail"><input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha"><button id="entrar">Conectar minhas contas</button><small id="erro"></small><p class="muted">Sua senha é enviada apenas ao Supabase do aplicativo e não é salva nesta página.</p></section>
+/* Login financeiro opcional, sem espaço branco no topo */.login{position:fixed;inset:0;z-index:40;background:#f8faf7;overflow-y:auto;justify-content:center;padding:30px 22px;box-shadow:none}.login[hidden]{display:none!important}.main{padding-top:calc(16px + env(safe-area-inset-top))}.app{min-height:100dvh}</style></head><body><div class="app"><header class="top"><small>Assistente pessoal por voz</small><h1>Assistente Lumi ✦</h1><span id="status" class="status">Verificando acesso...</span></header>
+<section class="login" id="login" hidden><h2>Vincular ao Minhas Contas</h2><p>Entre com a mesma conta do aplicativo financeiro. Assim os gastos poderão ser salvos na sua planilha.</p><input id="email" type="email" autocomplete="username" placeholder="Seu e-mail"><input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha"><button id="entrar">Conectar minhas contas</button><small id="erro"></small><p class="muted">Sua senha é enviada apenas ao Supabase do aplicativo e não é salva nesta página.</p><button type="button" id="cancelarLogin" style="border:0;background:transparent;color:#0b6954;font-weight:700;padding:12px">← Voltar ao Lumi</button></section>
 <section class="main" id="main" hidden>
 <div class="lumi-hero">
   <div class="lumi-brand"><div><span>SUA ASSISTENTE PESSOAL</span><h2>Assistente Lumi ✦</h2></div><button class="lumi-config" type="button" onclick="document.getElementById('vozToggle').click()" aria-label="Configurações de voz">⚙</button></div>
@@ -46,7 +46,7 @@ body{background:#f2f4f2}.app{background:#f7f8f6}.top{display:none}.main{padding:
 <script>
 const sb=supabase.createClient('https://ermxjynmcynrcauzlxab.supabase.co','sb_publishable_F2_ohSakBQfGC5wsrTUauA_ALfhvswq');
 const el=x=>document.getElementById(x),fmt=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});let user=null,pendente=null,verRem=false,emEnvio=false;
-const storedKey=()=> 'assistente-minhas-contas-lembretes-'+user.id;
+const storedKey=()=> 'assistente-minhas-contas-lembretes-'+(user?.id||'convidado');
 function carregarRem(){try{return JSON.parse(localStorage.getItem(storedKey())||'[]')}catch(e){return []}}
 function guardarRem(v){localStorage.setItem(storedKey(),JSON.stringify(v))}
 function vozFeminina(){
@@ -64,9 +64,11 @@ function falar(texto){
  window.speechSynthesis.speak(f);
 }
 function print(text){el('resposta').hidden=false;el('resposta').textContent=text;falar(text)}
-function screen(u){user=u;el('login').hidden=!!u;el('main').hidden=!u;el('form').hidden=!u;el('rodape').hidden=!u;el('status').textContent=u?'Conectado ao Minhas Contas':'Conecte sua conta para sincronizar';if(u)atualizarRem()}
+function screen(u){user=u;el('main').hidden=false;el('form').hidden=false;el('rodape').hidden=false;el('login').hidden=true;el('status').textContent=u?'Minhas Contas conectado':'Lumi pronto para conversar';if(u)atualizarRem()}
+function solicitarConexao(){if(user){abrirArea('financas');return}el('login').hidden=false;el('login').scrollIntoView({behavior:'smooth',block:'start'});}
+function esconderConexao(){el('login').hidden=true}
 async function iniciar(){const {data}=await sb.auth.getSession();screen(data.session?.user||null);sb.auth.onAuthStateChange((_,s)=>{if(s?.user?.id!==user?.id)screen(s?.user||null)})}
-el('entrar').onclick=async()=>{el('erro').textContent='Conectando...';const {data,error}=await sb.auth.signInWithPassword({email:el('email').value.trim(),password:el('senha').value});el('erro').textContent=error?'Não consegui entrar. Confira os dados.':'';if(data?.user)screen(data.user)};
+el('entrar').onclick=async()=>{el('erro').textContent='Conectando...';const {data,error}=await sb.auth.signInWithPassword({email:el('email').value.trim(),password:el('senha').value});el('erro').textContent=error?'Não consegui entrar. Confira os dados.':'';if(data?.user){screen(data.user);abrirArea('financas')}};
 el('sair').onclick=async()=>{await sb.auth.signOut();screen(null)};
 function interpretar(msg){let s=msg.trim(),n=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  if(/lembra|lembrete|lembrar/.test(n)){let m=n.match(/\bdia\s+(\d{1,2})(?:\/(\d{1,2}))?(?:\/(\d{4}))?\b/)||n.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/);if(!m)return {error:'Diga a data também: Me lembra de pagar a luz dia 15/11.'};let now=new Date(),d=+m[1],mo=m[2]?+m[2]:now.getMonth()+1,y=m[3]?+m[3]:now.getFullYear();let dt=new Date(y,mo-1,d);if(dt.getDate()!==d||dt.getMonth()!==mo-1)return {error:'A data informada é inválida.'};if(!m[2]&&dt<new Date(now.getFullYear(),now.getMonth(),now.getDate()))dt.setMonth(dt.getMonth()+1);let date=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');return {tipo:'lembrete',nome:s.replace(/^(me\s+)?lembra(?:r|ete)?\s*(?:de\s*)?/i,'').trim(),data:date}}
@@ -79,7 +81,7 @@ el('microfone').onclick=()=>{let SR=window.SpeechRecognition||window.webkitSpeec
 el('nao').onclick=()=>{pendente=null;el('confirmar').hidden=true;print('Cancelado.')};
 el('sim').onclick=async()=>{if(!pendente||emEnvio)return;let p=pendente;emEnvio=true;el('sim').disabled=true;try{
  if(p.tipo==='lembrete'){let arr=carregarRem();arr.push({id:Date.now(),nome:p.nome,data:p.data});guardarRem(arr);print('🔔 Lembrete salvo neste aparelho. Não envia notificação com o app fechado.');atualizarRem()}
- else {const {data,error}=await sb.from('carteiras').select('dados').eq('user_id',user.id).maybeSingle();if(error)throw error;
+ else {if(!user){solicitarConexao();print('Para registrar gastos no Minhas Contas, conecte sua conta primeiro.');return;}const {data,error}=await sb.from('carteiras').select('dados').eq('user_id',user.id).maybeSingle();if(error)throw error;
  const estado=data?.dados&&typeof data.dados==='object'?data.dados:{contas:[],meses:{},rendaPadrao:null};
  if(!Array.isArray(estado.contas))estado.contas=[];if(!estado.meses)estado.meses={};
  let dt=new Date(),k=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'),id='voz'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -92,12 +94,14 @@ function atualizarRem(){if(!user)return;const arr=carregarRem();el('itens').repl
 el('vozToggle').onclick=()=>{audioAtivo=!audioAtivo;el('vozToggle').textContent=audioAtivo?'🔊 Voz ligada':'🔇 Voz desligada';if(!audioAtivo&&window.speechSynthesis)window.speechSynthesis.cancel();else falar('Voz ativada. Estou pronta para ajudar.')};
 el('lembretes').onclick=()=>{verRem=!verRem;el('listaRem').style.display=verRem?'block':'none';if(verRem)atualizarRem()};
 
+el('cancelarLogin').onclick=esconderConexao;
 const blocos={agenda:'📅 Agenda',lembretes:'🔔 Lembretes',tarefas:'✅ Tarefas',compras:'🛒 Lista de compras',notas:'📝 Anotações',financas:'💳 Finanças'};
-function listaDados(tipo){try{let v=JSON.parse(localStorage.getItem('mr-'+user.id+'-'+tipo)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
-function guardarDados(tipo,arr){localStorage.setItem('mr-'+user.id+'-'+tipo,JSON.stringify(arr))}
+function listaDados(tipo){try{let v=JSON.parse(localStorage.getItem('mr-'+(user?.id||'convidado')+'-'+tipo)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+function guardarDados(tipo,arr){localStorage.setItem('mr-'+(user?.id||'convidado')+'-'+tipo,JSON.stringify(arr))}
 function abrirArea(tipo){
  const p=el('areaPainel');p.hidden=false;p.replaceChildren();
  const h=document.createElement('h3');h.textContent=blocos[tipo];p.append(h);
+ if(tipo==='financas'&&!user){solicitarConexao();return}
  if(tipo==='financas'){let aviso=document.createElement('p');aviso.textContent='Seus gastos falados são enviados ao Minhas Contas após sua confirmação.';p.append(aviso);let a=document.createElement('a');a.href='/minhas-contas/';a.textContent='Abrir minha planilha';p.append(a);return}
  const input=document.createElement('input');input.placeholder=tipo==='agenda'?'Ex.: Consulta médica dia 02/11 às 14h':tipo==='lembretes'?'Ex.: Pagar a luz dia 15/11':tipo==='compras'?'Ex.: Café, arroz, leite':tipo==='tarefas'?'Ex.: Levar carro para revisão':'Escreva sua anotação';
  const button=document.createElement('button');button.textContent='Adicionar';
